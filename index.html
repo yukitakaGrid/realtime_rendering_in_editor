@@ -1,0 +1,44 @@
+<!doctype html>
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <title>WebGPU Life</title>
+  </head>
+  <body>
+    <canvas width="512" height="512"></canvas>
+    <script type="module" src="matrix.js"></script>
+    <button id="compileBtn">Compile and Run</button>
+    
+    <script type="module">
+      import {getViewMatrix,getPerspectiveMatrix} from './matrix.js';
+
+
+      const compileBtn = document.getElementById('compileBtn');
+      
+      // ファイルを読み込む関数
+      function readFile(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsText(file);
+        });
+      }
+      
+      // コンパイルと実行の関数
+      async function compileAndRun() {
+        try {
+          const file = await fetch('render.txt').then(response => response.blob());
+          const code = await readFile(file);
+          eval(code);
+        } catch (error) {
+          console.error('Error:', error);
+        }
+      }
+      
+      // ボタンのクリックイベントリスナー
+      compileBtn.addEventListener('click', compileAndRun);
+    </script>
+  </body>
+</html>

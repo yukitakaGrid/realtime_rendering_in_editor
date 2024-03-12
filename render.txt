@@ -1,0 +1,252 @@
+async function main(){
+    const UPDATE_INTERVAL = 100; // Update every 200ms (5 times/sec)
+    let step = 0; // Track how many simulation steps have been run
+
+    const canvas = document.querySelector("canvas");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+
+    //init device and context
+    if (!navigator.gpu) {
+        throw new Error("WebGPU not supported on this browser.");
+    }
+    
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) {
+        throw new Error("No appropriate GPUAdapter found.");
+    }
+    const device = await adapter.requestDevice();
+
+    const context = canvas.getContext("webgpu");
+    const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
+    context.configure({
+        device: device,
+        format: canvasFormat,
+    });
+
+
+    //camera setting
+    const cameraPosition = { x: 0, y: 0, z: -1 };
+    const cameraLookAt = { x: 0, y: 0, z: 0 };
+    const cameraUp = { x: 0, y: 1, z: 0 };
+    const fov = 60 * Math.PI / 180; 
+    const aspectRatio = canvas.width / canvas.height;
+    const near = 0.1;
+    const far = 100;
+
+    const viewMatrix = getViewMatrix(cameraPosition, cameraLookAt, cameraUp);
+    const projectionMatrix = getPerspectiveMatrix(fov, aspectRatio, near, far);
+
+    const viewMatrixBuffer = device.createBuffer({
+        mappedAtCreation: true,
+        size: 64,
+        usage: GPUBufferUsage.UNIFORM,
+    });
+    new Float32Array(viewMatrixBuffer.getMappedRange()).set(viewMatrix);
+    viewMatrixBuffer.unmap();
+
+    const projMatrixBuffer = device.createBuffer({
+        mappedAtCreation: true,
+        size: 64,
+        usage: GPUBufferUsage.UNIFORM,
+    });
+    new Float32Array(projMatrixBuffer.getMappedRange()).set(projectionMatrix);
+    projMatrixBuffer.unmap();
+
+
+    //generate vertex data
+    const indices = [];
+    const vertexData = [];
+
+    const latitudeBands = 30;
+    const longitudeBands = 30;
+    const radius = 0.3;
+
+    for (let latitude = 0; latitude <= latitudeBands; latitude++) {
+        const theta = latitude * Math.PI / latitudeBands;
+        const sinTheta = Math.sin(theta);
+        const cosTheta = Math.cos(theta);
+
+        for (let longitude = 0; longitude <= longitudeBands; longitude++) {
+            const phi = longitude * 2 * Math.PI / longitudeBands;
+            const sinPhi = Math.sin(phi);
+            const cosPhi = Math.cos(phi);
+
+            const x = cosPhi * sinTheta;
+            const y = cosTheta;
+            const z = sinPhi * sinTheta;
+
+            vertexData.push(radius * x, radius * y, radius * z);
+            vertexData.push(x,y,z);
+        }
+    }
+
+    for (let latitude = 0; latitude < latitudeBands; latitude++) {
+        for (let longitude = 0; longitude < longitudeBands; longitude++) {
+            const first = latitude * (longitudeBands + 1) + longitude;
+            const second = first + longitudeBands + 1;
+
+            indices.push(first, second, first + 1);
+            indices.push(second, second + 1, first + 1);
+        }
+    }
+
+
+    //generate vertex data and index data
+    const vertexBuffer = device.createBuffer({
+        label: "Sphere vertices",
+        size: vertexData.length * 4,
+        usage: GPUBufferUsage.VERTEX,
+        mappedAtCreation: true,
+    });
+    new Float32Array(vertexBuffer.getMappedRange()).set(vertexData);
+    vertexBuffer.unmap();
+
+    const indexBuffer = device.createBuffer({
+        label: "Sphere index",
+        size: indices.length * 2,
+        usage: GPUBufferUsage.INDEX,
+        mappedAtCreation: true,
+    });
+    new Uint16Array(indexBuffer.getMappedRange()).set(indices);
+    indexBuffer.unmap();
+
+    //define shader code
+    const cellShaderModule = device.createShaderModule({
+    label: "Cell shader",
+    code: `
+        @group(0) @binding(0)
+        var<uniform> viewMatrix: mat4x4<f32>;
+        @group(0) @binding(1)  
+        var<uniform> projMatrix: mat4x4<f32>;
+
+        struct VertexInput{
+            @location(0) position: vec3<f32>,
+            @location(1) normal: vec3<f32>,
+        }
+
+        struct VertexOutput{
+            @builtin(position) position: vec4<f32>,
+            @location(0) normal : vec3<f32>,
+        }
+
+        @vertex
+        fn vertexMain(input: VertexInput) -> VertexOutput {
+            let worldPos: vec4<f32> = vec4<f32>(input.position,1.0);
+            let worldNormal = input.normal;
+            let viewPos = viewMatrix * worldPos;
+            let projectedPos = projMatrix * viewPos;
+            var output: VertexOutput;
+            output.position = worldPos;
+            output.normal = worldNormal;
+            return output;
+        }
+
+        // フラグメントシェーダー
+        struct FragmentInput {
+            @location(0) normal : vec3<f32>,
+        };
+
+        @fragment
+        fn fragmentMain(input : FragmentInput) -> @location(0) vec4<f32> {
+            return vec4<f32>(input.normal,1.0);
+        }
+    `
+    });
+
+    const vertexBufferLayout = {
+        arrayStride: (3 + 3) * 4,
+        attributes: [{
+            format: "float32x3",
+            offset: 0,
+            shaderLocation: 0, // Position, see vertex shader
+        },
+        {
+            format: 'float32x3',
+            offset: 12,
+            shaderLocation: 1,
+        }
+    ],
+    };
+
+    const bindGroupLayout = device.createBindGroupLayout({
+        entries: [
+            {
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {},
+            },
+            {
+                binding: 1,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {},
+            },
+        ],
+    });
+
+    const pipelineLayout = device.createPipelineLayout({
+        bindGroupLayouts: [bindGroupLayout],
+    });
+
+
+    //create render pipeline
+    const pipeline = device.createRenderPipeline({
+    label: "pipeline",
+    layout: pipelineLayout,
+    vertex: {
+        module: cellShaderModule,
+        entryPoint: "vertexMain",
+        buffers: [vertexBufferLayout]
+    },
+    fragment: {
+        module: cellShaderModule,
+        entryPoint: "fragmentMain",
+        targets: [{
+        format: canvasFormat
+        }]
+    },
+    primitive: {
+        topology: "triangle-list",
+    }
+    });
+
+    const bindGroup = device.createBindGroup({
+        layout: bindGroupLayout, 
+        entries: [
+            { binding: 0, resource: { buffer: viewMatrixBuffer } },
+            { binding: 1, resource: { buffer: projMatrixBuffer } },
+        ],
+    });
+
+    function updateGrid(){
+        const encoder = device.createCommandEncoder();
+    
+        step++;
+    
+        const pass = encoder.beginRenderPass({
+        colorAttachments: [{
+            view: context.getCurrentTexture().createView(),
+            loadOp: "clear",
+            clearValue: {r: 0.1,g:0.1,b:0.1,a:1},
+            storeOp: "store",
+        }]
+        });
+    
+        pass.setPipeline(pipeline);
+        pass.setVertexBuffer(0, vertexBuffer);
+        pass.setIndexBuffer(indexBuffer,"uint16");
+        pass.setBindGroup(0,bindGroup);
+        pass.drawIndexed(indices.length);
+    
+        pass.end();
+    
+        // Finish the command buffer and immediately submit it.
+        device.queue.submit([encoder.finish()]);
+    }
+    
+    setInterval(updateGrid,UPDATE_INTERVAL);
+}
+
+main();

@@ -29,7 +29,7 @@
       // コンパイルと実行の関数
       async function compileAndRun() {
         try {
-          const file = await fetch('render.txt').then(response => response.blob());
+          const file = await fetch('randam_particle.txt').then(response => response.blob());
           const code = await readFile(file);
           eval(code);
         } catch (error) {

@@ -1,44 +1,83 @@
-<!doctype html>
-
-<html lang="ja">
+<!DOCTYPE html>
+<html lang="en">
   <head>
-    <meta charset="utf-8">
-    <title>WebGPU Life</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Canvas Interface</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
   </head>
   <body>
-    <canvas width="512" height="512"></canvas>
-    <script type="module" src="matrix.js"></script>
-    <button id="compileBtn">Compile and Run</button>
+    <div class="top-bar">
+      Your Top Bar Content Here
+      <button class="btn btn-primary publish-btn">Publish</button>
+    </div>
+    <div class="d-flex">
+      <div class="sidebar col-md-2">
+      <button class="btn btn-secondary btn-sm mb-2">Hello Text</button>
+      <button class="btn btn-light btn-block mb-1 d-flex justify-content-between align-items-center" type="button" data-toggle="collapse" data-target="#canvasOptions" aria-expanded="false" aria-controls="canvasOptions">
+        <span class="collapse-indicator">▶️</span>
+        <span>Canvas</span>
+      </button>
+      <div class="collapse" id="canvasOptions">
+        <button class="btn btn-light btn-block mb-1">Particles</button>
+        <button class="btn btn-light btn-block">Cube</button>
+      </div>
+    </div>
     
-    <script type="module">
-      import {getViewMatrix,getPerspectiveMatrix} from './matrix.js';
+    <div class="canvas-container col-md-8">
+      <div class="canvas-content">
+          <canvas ></canvas>
+          <script type="module" src="matrix.js"></script>
+      </div>
+    </div>
+    
+    <div class="sidebar col-md-2">
+        <strong class="d-block text-dark mb-2">File</strong>
+        <div class="d-flex mb-3">
+          <select id="fileSelector" class="form-control w-100 mb-3">
+            <option value="" disabled selected>Select a file...</option>
+            <option value="randam_particle.txt">randam_particle</option>
+            <option value="render.txt">render</option>
+          </select>
+        </div>
+      <div>
+        <strong class="d-block text-dark mb-2">Range</strong>
+        <div class="d-flex mb-3">
+          <div class="flex-fill mr-1">
+            <label for="rangeX" class="form-label">X</label>
+            <input type="number" id="rangeX" class="form-control" placeholder="0">
+          </div>
+          <div class="flex-fill mx-1">
+            <label for="rangeY" class="form-label">Y</label>
+            <input type="number" id="rangeY" class="form-control" placeholder="0">
+          </div>
+          <div class="flex-fill ml-1">
+            <label for="rangeZ" class="form-label">Z</label>
+            <input type="number" id="rangeZ" class="form-control" placeholder="0">
+          </div>
+        </div>
 
+        <strong class="d-block text-dark mb-2">Color</strong>
+        <div class="mb-3">
+          <label for="colorPicker" class="form-label text-light">Color</label>
+          <input type="color" id="colorPicker" class="form-control form-control-color">
+        </div>
 
-      const compileBtn = document.getElementById('compileBtn');
-      
-      // ファイルを読み込む関数
-      function readFile(file) {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = () => reject(reader.error);
-          reader.readAsText(file);
-        });
-      }
-      
-      // コンパイルと実行の関数
-      async function compileAndRun() {
-        try {
-          const file = await fetch('randam_particle.txt').then(response => response.blob());
-          const code = await readFile(file);
-          eval(code);
-        } catch (error) {
-          console.error('Error:', error);
-        }
-      }
-      
-      // ボタンのクリックイベントリスナー
-      compileBtn.addEventListener('click', compileAndRun);
-    </script>
+        <strong class="d-block text-dark mb-2">Count</strong>
+        <div class="mb-3">
+          <label for="count" class="form-label text-light">Count</label>
+          <input type="number" id="count" class="form-control" placeholder="1" min="0" max="100000">
+        </div>
+        <strong class="d-block text-dark mb-2">Wind</strong>
+        
+        <button id="compileBtn" class="btn btn-primary btn-sm">Compile and Run</button>
+      </div>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <script type="module" src="index.js"></script>
   </body>
 </html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Canvas Interface</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="top-bar">
+      Your Top Bar Content Here
+      <button class="btn btn-primary publish-btn">Publish</button>
+    </div>
+    <div class="d-flex">
+      <div class="sidebar col-md-2">
+      <button class="btn btn-secondary btn-sm mb-2">Hello Text</button>
+      <button class="btn btn-light btn-block mb-1 d-flex justify-content-between align-items-center" type="button" data-toggle="collapse" data-target="#canvasOptions" aria-expanded="false" aria-controls="canvasOptions">
+        <span class="collapse-indicator">▶️</span>
+        <span>Canvas</span>
+      </button>
+      <div class="collapse" id="canvasOptions">
+        <button class="btn btn-light btn-block mb-1">Particles</button>
+        <button class="btn btn-light btn-block">Cube</button>
+      </div>
+    </div>
+    
+    <div class="canvas-container col-md-8">
+      <div class="canvas-content">
+          <canvas id="canvas" width="512" height="512"></canvas>
+          <script type="module" src="main.js"></script>
+      </div>
+    </div>
+    
+    <div class="sidebar col-md-2">
+      <div>
+        <strong class="d-block text-dark mb-2">Range</strong>
+        <div class="d-flex mb-3">
+          <div class="flex-fill mr-1">
+            <label for="rangeX" class="form-label">X</label>
+            <input type="number" id="rangeX" class="form-control" placeholder="0">
+          </div>
+          <div class="flex-fill mx-1">
+            <label for="rangeY" class="form-label">Y</label>
+            <input type="number" id="rangeY" class="form-control" placeholder="0">
+          </div>
+          <div class="flex-fill ml-1">
+            <label for="rangeZ" class="form-label">Z</label>
+            <input type="number" id="rangeZ" class="form-control" placeholder="0">
+          </div>
+        </div>
+
+        <strong class="d-block text-dark mb-2">Color</strong>
+        <div class="mb-3">
+          <label for="colorPicker" class="form-label text-light">Color</label>
+          <input type="color" id="colorPicker" class="form-control form-control-color">
+        </div>
+
+        <strong class="d-block text-dark mb-2">Count</strong>
+        <div class="mb-3">
+          <label for="count" class="form-label text-light">Count</label>
+          <input type="number" id="count" class="form-control" placeholder="1" min="0" max="10000000000">
+        </div>
+      </div>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+  </body>
+</html>
